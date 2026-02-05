@@ -11,6 +11,7 @@ use crate::{
         read_write::*,
         table_context::TableContext,
     },
+    messaging::attachment::{AnsiAttachment, Attachment, UnicodeAttachment},
     ndb::{
         block::{IntermediateTreeBlock, LeafSubNodeTreeEntry, SubNodeTree},
         block_id::BlockId,
@@ -137,6 +138,11 @@ pub trait Message {
     fn properties(&self) -> &MessageProperties;
     fn recipient_table(&self) -> Option<&Rc<dyn TableContext>>;
     fn attachment_table(&self) -> Option<&Rc<dyn TableContext>>;
+    fn read_attachment(
+        self: Rc<Self>,
+        sub_node: NodeId,
+        prop_ids: Option<&[u16]>,
+    ) -> io::Result<Rc<dyn Attachment>>;
 }
 
 struct MessageInner<Pst>
@@ -389,6 +395,14 @@ impl Message for UnicodeMessage {
     fn attachment_table(&self) -> Option<&Rc<dyn TableContext>> {
         self.inner.attachment_table.as_ref()
     }
+
+    fn read_attachment(
+        self: Rc<Self>,
+        sub_node: NodeId,
+        prop_ids: Option<&[u16]>,
+    ) -> io::Result<Rc<dyn Attachment>> {
+        Ok(UnicodeAttachment::read(self, sub_node, prop_ids)?)
+    }
 }
 
 impl MessageReadWrite<UnicodePstFile> for UnicodeMessage {
@@ -448,6 +462,14 @@ impl Message for AnsiMessage {
 
     fn attachment_table(&self) -> Option<&Rc<dyn TableContext>> {
         self.inner.attachment_table.as_ref()
+    }
+
+    fn read_attachment(
+        self: Rc<Self>,
+        sub_node: NodeId,
+        prop_ids: Option<&[u16]>,
+    ) -> io::Result<Rc<dyn Attachment>> {
+        Ok(AnsiAttachment::read(self, sub_node, prop_ids)?)
     }
 }
 
